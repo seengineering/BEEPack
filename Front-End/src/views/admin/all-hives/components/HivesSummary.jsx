@@ -5,6 +5,7 @@ import Stack from "@mui/material/Stack";
 import { styled } from "@mui/material/styles";
 import GpsMap from "./GpsMap.jsx";
 import { MdGpsFixed, MdWbSunny, MdWaterDrop, MdAir } from "react-icons/md";
+import BatteryIndicator from './BatteryBar.jsx';
 
 const Item = styled(Paper)(({ theme }) => ({
   backgroundColor: "#fff",
@@ -43,10 +44,8 @@ function HivesSummary(props) {
           No Data hives{" "}
           <span style={{ fontWeight: "bold" }}>{props.noDataHives}</span>
         </Item>
-        
-        {/* Weather Data Item */}
-        
-        {/* END Weather Data Item */}
+         {/* Updated Controller Battery */}
+        <BatteryIndicator voltage={props.controllerBatteryVoltage} />
       </Stack>
     </div>
     

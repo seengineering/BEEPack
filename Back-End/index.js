@@ -332,8 +332,8 @@ app.post("/temphum", async (req, res) => {
   const sensors = [local_sensor, remote_sensor];
 
   const insertQuery = `
-    INSERT INTO sensors_data (sensor_id, temperature, humidity, latitude, longitude)
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO sensors_data (sensor_id, temperature, humidity, latitude, longitude, battery_voltage)
+    VALUES ($1, $2, $3, $4, $5, $6)
   `;
 
   try {
@@ -344,6 +344,7 @@ app.post("/temphum", async (req, res) => {
         sensor.humidity,
         sensor.latitude,
         sensor.longitude,
+        sensor.battery_voltage || null  // fallback if voltage is missing
       ];
 
       await db.query(insertQuery, values);
@@ -413,7 +414,8 @@ app.get("/admin/getAllHives", async (req, res) => {
         sd.humidity,
         sd.timestamp AS "lastDataR",
         sd.longitude,
-        sd.latitude
+        sd.latitude,
+        sd.battery_voltage
       FROM beehives b
       LEFT JOIN sensors_data sd ON (
         sd.sensor_id = b.sensor_id AND

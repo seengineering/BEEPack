@@ -76,7 +76,8 @@ CREATE TABLE public.sensors_data (
     longitude numeric(9,6),
     latitude numeric(8,6),
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    hive_state text
+    hive_state text,
+    battery_voltage double precision
 );
 
 
@@ -102,48 +103,6 @@ ALTER SEQUENCE public.sensors_data_data_id_seq OWNER TO postgres;
 --
 
 ALTER SEQUENCE public.sensors_data_data_id_seq OWNED BY public.sensors_data.data_id;
-
-
---
--- Name: sms_alert_settings; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.sms_alert_settings (
-    id integer NOT NULL,
-    user_id integer NOT NULL,
-    min_temp double precision NOT NULL,
-    max_temp double precision NOT NULL,
-    min_humidity double precision NOT NULL,
-    max_humidity double precision NOT NULL,
-    min_weight double precision NOT NULL,
-    max_weight double precision NOT NULL,
-    is_alerts_on boolean DEFAULT false NOT NULL,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
-);
-
-
-ALTER TABLE public.sms_alert_settings OWNER TO postgres;
-
---
--- Name: sms_alert_settings_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
---
-
-CREATE SEQUENCE public.sms_alert_settings_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.sms_alert_settings_id_seq OWNER TO postgres;
-
---
--- Name: sms_alert_settings_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
---
-
-ALTER SEQUENCE public.sms_alert_settings_id_seq OWNED BY public.sms_alert_settings.id;
 
 
 --
@@ -201,13 +160,6 @@ ALTER TABLE ONLY public.sensors_data ALTER COLUMN data_id SET DEFAULT nextval('p
 
 
 --
--- Name: sms_alert_settings id; Type: DEFAULT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.sms_alert_settings ALTER COLUMN id SET DEFAULT nextval('public.sms_alert_settings_id_seq'::regclass);
-
-
---
 -- Name: users user_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -239,22 +191,6 @@ ALTER TABLE ONLY public.sensors_data
 
 
 --
--- Name: sms_alert_settings sms_alert_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.sms_alert_settings
-    ADD CONSTRAINT sms_alert_settings_pkey PRIMARY KEY (id);
-
-
---
--- Name: sms_alert_settings sms_alert_settings_user_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.sms_alert_settings
-    ADD CONSTRAINT sms_alert_settings_user_id_key UNIQUE (user_id);
-
-
---
 -- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -276,14 +212,6 @@ ALTER TABLE ONLY public.users
 
 ALTER TABLE ONLY public.beehives
     ADD CONSTRAINT beehives_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
-
-
---
--- Name: sms_alert_settings fk_user_float; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.sms_alert_settings
-    ADD CONSTRAINT fk_user_float FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
 
 
 --

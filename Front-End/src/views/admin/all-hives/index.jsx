@@ -5,7 +5,7 @@ import BEE1 from "assets/img/beehive/bee5.jpg";
 import AddHiveButton from "./components/AddHiveButton.jsx";
 import Alert from "@mui/material/Alert";
 import HivesSummary from "./components/HivesSummary.jsx";
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 const AllHives = () => {
   const navigate = useNavigate(); // Initialize navigate function
@@ -18,6 +18,7 @@ const AllHives = () => {
   const [isSensorIdAlreadyExist, setIsSensorIdAlreadyExist] = useState(false);
   const [isHiveModified, setIsHiveModified] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // Add loading state
+  const [controllerBatteryVoltage, setcontrollerBatteryVoltage] = useState(); // Add loading state
   const [healthCounts, setHealthCounts] = useState({
     healthy: 0,
     unhealthy: 0,
@@ -35,20 +36,23 @@ const AllHives = () => {
   };
 
   /////// Fetch All Hives useEffect when a load the page and repete it every 2s////////
-useEffect(() => {
+  useEffect(() => {
     const fetchHives = async () => {
       try {
         setIsLoading(true); // Start loading
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/admin/getAllHives`, {
-          credentials: "include",
-          headers: {
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
-          },
-        });
+        const response = await fetch(
+          `${process.env.REACT_APP_API_URL}/admin/getAllHives`,
+          {
+            credentials: "include",
+            headers: {
+              "Cache-Control": "no-cache",
+              Pragma: "no-cache",
+            },
+          }
+        );
 
         if (response.status === 401) {
-          navigate('/auth/sign-in'); // Redirect immediately if unauthorized
+          navigate("/auth/sign-in"); // Redirect immediately if unauthorized
           return;
         }
 
@@ -60,20 +64,19 @@ useEffect(() => {
         setlistOfHives(data);
       } catch (error) {
         console.error("Error fetching data:", error);
-        if (error.message === 'Failed to fetch') {
-          console.log('Network error - server might be down');
+        if (error.message === "Failed to fetch") {
+          console.log("Network error - server might be down");
         }
       } finally {
         setIsLoading(false); // Stop loading (even if error occurs)
       }
     };
 
-  fetchHives(); // Initial load
+    fetchHives(); // Initial load
 
-  //const interval = setInterval(fetchHives, 1000);
-  //return () => clearInterval(interval); // Cleanup on unmount
-}, [navigate]);
-
+    //const interval = setInterval(fetchHives, 1000);
+    //return () => clearInterval(interval); // Cleanup on unmount
+  }, [navigate]);
 
   ///////////// notification area /////////////////
   useEffect(() => {
@@ -128,14 +131,17 @@ useEffect(() => {
 
     /////////// adding hive query ///////////////
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/admin/add-hive`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newHive),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/admin/add-hive`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(newHive),
+        }
+      );
       ////////////////////////////////////////////////////
 
       /////////// check if sensor id already existe ///////////////
@@ -159,14 +165,15 @@ useEffect(() => {
       const fetchHives = async () => {
         try {
           const response = await fetch(
-            `${process.env.REACT_APP_API_URL}/admin/getAllHives`, {
-      credentials: "include", // ← IMPORTANT
-                headers: {
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
-          },
-
-    });
+            `${process.env.REACT_APP_API_URL}/admin/getAllHives`,
+            {
+              credentials: "include", // ← IMPORTANT
+              headers: {
+                "Cache-Control": "no-cache",
+                Pragma: "no-cache",
+              },
+            }
+          );
           const data = await response.json();
           setlistOfHives(data);
           console.log(listOfHives);
@@ -224,13 +231,16 @@ useEffect(() => {
   ///// update hives card after editing ////////
   const updateHivesCard = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/admin/getAllHives`, {
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/admin/getAllHives`,
+        {
           credentials: "include",
           headers: {
             "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
+            Pragma: "no-cache",
           },
-        });
+        }
+      );
       const data = await response.json();
       setlistOfHives(data);
       editWarnnigHandler("Hive updated data received successfully");
@@ -240,7 +250,7 @@ useEffect(() => {
   };
   /**/
   if (isLoading) {
-    return ;
+    return;
   }
   return (
     <div>
@@ -261,11 +271,16 @@ useEffect(() => {
           healthyHives={healthCounts.healthy}
           unhealthyHives={healthCounts.unhealthy}
           noDataHives={healthCounts.noData}
+          controllerBatteryVoltage={
+            listOfHives.length > 0 && listOfHives[0].battery_voltage != null
+              ? listOfHives[0].battery_voltage
+              : 0
+          }
           //lon={listOfHives ? listOfHives[0].longitude: null}
           //lat={listOfHives ? listOfHives[0].latitude : null}
         />
       </div>
-      
+
       <AddHiveButton sliderHandler={sliderHandler} />
       {isSlideclicked ? <AddHiveArea AddHive={AddHiveHandler} /> : null}
       {isHiveAdded ? (
