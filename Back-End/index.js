@@ -717,14 +717,16 @@ app.get("/api/public_alert-config", async (req, res) => {
 
     if (result.rows.length === 0) {
       return res.status(200).json({
-        MIN_TEMP: 32,
+MIN_TEMP: 32,
         MAX_TEMP: 36,
         MIN_HUMIDITY: 50,
         MAX_HUMIDITY: 70,
         MIN_WEIGHT: 10,
         MAX_WEIGHT: 100,
-        isAlertsON: false
-      });
+        isAlertsON: false,
+        REFERENCE_LATITUDE: null,
+        REFERENCE_LONGITUDE: null
+            });
     }
 
     const row = result.rows[0];
@@ -737,6 +739,8 @@ app.get("/api/public_alert-config", async (req, res) => {
       MIN_WEIGHT: row.min_weight,
       MAX_WEIGHT: row.max_weight,
       isAlertsON: row.is_alerts_on,
+      REFERENCE_LATITUDE: row.latitude,
+      REFERENCE_LONGITUDE: row.longitude
     });
   } catch (error) {
     console.error("Error fetching alert config:", error);
@@ -767,7 +771,9 @@ app.get("/api/sms-alert-settings", async (req, res) => {
         MAX_HUMIDITY: 70,
         MIN_WEIGHT: 10,
         MAX_WEIGHT: 100,
-        isAlertsON: false
+        isAlertsON: false,
+        REFERENCE_LATITUDE: 35.5024,
+        REFERENCE_LONGITUDE: 11.0457
       });
     }
 
@@ -782,6 +788,9 @@ app.get("/api/sms-alert-settings", async (req, res) => {
       MIN_WEIGHT: row.min_weight,
       MAX_WEIGHT: row.max_weight,
       isAlertsON: row.is_alerts_on,
+      REFERENCE_LATITUDE: row.latitude,
+      REFERENCE_LONGITUDE: row.longitude
+
     });
   } catch (error) {
     console.error("Error fetching SMS alert settings:", error);
@@ -799,41 +808,47 @@ app.post("/api/update_alert-config", async (req, res) => {
 
     const {
       MIN_TEMP,
-      MAX_TEMP,
-      MIN_HUMIDITY,
-      MAX_HUMIDITY,
-      MIN_WEIGHT,
-      MAX_WEIGHT,
-      isAlertsON
+  MAX_TEMP,
+  MIN_HUMIDITY,
+  MAX_HUMIDITY,
+  MIN_WEIGHT,
+  MAX_WEIGHT,
+  isAlertsON,
+  REFERENCE_LATITUDE,
+  REFERENCE_LONGITUDE
     } = req.body;
 
     await db.query(
-      `
-      INSERT INTO sms_alert_settings 
-        (user_id, min_temp, max_temp, min_humidity, max_humidity, min_weight, max_weight, is_alerts_on)
-      VALUES 
-        ($1, $2, $3, $4, $5, $6, $7, $8)
-      ON CONFLICT (user_id) 
-      DO UPDATE SET 
-        min_temp = EXCLUDED.min_temp,
-        max_temp = EXCLUDED.max_temp,
-        min_humidity = EXCLUDED.min_humidity,
-        max_humidity = EXCLUDED.max_humidity,
-        min_weight = EXCLUDED.min_weight,
-        max_weight = EXCLUDED.max_weight,
-        is_alerts_on = EXCLUDED.is_alerts_on
-      `,
-      [
-        userId,
-        MIN_TEMP,
-        MAX_TEMP,
-        MIN_HUMIDITY,
-        MAX_HUMIDITY,
-        MIN_WEIGHT,
-        MAX_WEIGHT,
-        isAlertsON
-      ]
-    );
+  `
+  INSERT INTO sms_alert_settings 
+    (user_id, min_temp, max_temp, min_humidity, max_humidity, min_weight, max_weight, is_alerts_on, latitude, longitude)
+  VALUES 
+    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+  ON CONFLICT (user_id) 
+  DO UPDATE SET 
+    min_temp = EXCLUDED.min_temp,
+    max_temp = EXCLUDED.max_temp,
+    min_humidity = EXCLUDED.min_humidity,
+    max_humidity = EXCLUDED.max_humidity,
+    min_weight = EXCLUDED.min_weight,
+    max_weight = EXCLUDED.max_weight,
+    is_alerts_on = EXCLUDED.is_alerts_on,
+    latitude = EXCLUDED.latitude,
+    longitude = EXCLUDED.longitude
+  `,
+  [
+    userId,
+    MIN_TEMP,
+    MAX_TEMP,
+    MIN_HUMIDITY,
+    MAX_HUMIDITY,
+    MIN_WEIGHT,
+    MAX_WEIGHT,
+    isAlertsON,
+    REFERENCE_LATITUDE,
+    REFERENCE_LONGITUDE
+  ]
+);
 
     res.status(200).json({ message: "Alert settings saved successfully" });
   } catch (error) {

@@ -13,6 +13,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <sys/unistd.h>
+#include <math.h>
 #include"sim800c.h"
 #include "main.h"
 
@@ -34,6 +35,9 @@ TaskHandle_t sim800_task_handle = NULL;
 
 uint8_t error_count=0;
 uint8_t max_error_count=3;
+
+float sim800_battery_voltage = 0.0;
+
 
 
     DHTData_t latestDHT = {0};  // Initialize to avoid garbage
@@ -164,7 +168,40 @@ void sim800_wait_response() {
         ESP_LOGE("SIM800C", "Failed to take mutex for wait_response");
     }
 }
+float get_sim800_battery_voltage() {
+    const char *cmd = "AT+CBC";
+    uint8_t data[BUF_SIZE] = {0};
 
+    // Send command
+    sim800_send_command(cmd);
+
+    // Read response
+    if (xSemaphoreTake(sim800_uart_mutex, portMAX_DELAY) == pdTRUE) {
+        int len = uart_read_bytes(UART_PORT, data, BUF_SIZE - 1, pdMS_TO_TICKS(1000));
+        if (len > 0) {
+            data[len] = '\0';
+
+            // Look for +CBC line in the response
+            char *cbc_line = strstr((char *)data, "+CBC:");
+            if (cbc_line) {
+                int bcs, bcl, voltage_mv;
+                if (sscanf(cbc_line, "+CBC: %d,%d,%d", &bcs, &bcl, &voltage_mv) == 3) {
+                    xSemaphoreGive(sim800_uart_mutex);
+                    return voltage_mv / 1000.0f;  // Convert to volts
+                }
+            } else {
+                ESP_LOGW("SIM800C", "No +CBC response found");
+            }
+        } else {
+            ESP_LOGW("SIM800C", "No data or timeout reading +CBC response");
+        }
+        xSemaphoreGive(sim800_uart_mutex);
+    } else {
+        ESP_LOGE("SIM800C", "Failed to take mutex to read CBC");
+    }
+
+    return -1.0f;  // Return invalid value on failure
+}
 // === SIM800C Task ===
 void sim800c_task(void *pvParameters) {
 	
@@ -278,48 +315,70 @@ void sim800_http_post_task(void) {
 		if (xQueueReceive(gpsQueue, &tempGPS, pdMS_TO_TICKS(2000))) {
   		  latestGPS = tempGPS;  // Update persistent copy
   		  }  	
+
   		 // Try to receive new ESP-NOW data (non-blocking)
         if (xQueueReceive(espnowQueue, &tempESPNow, pdMS_TO_TICKS(10))) {
             latestESPNow = tempESPNow;
         }
+        
+        sim800_battery_voltage = get_sim800_battery_voltage(); 
+
         // Construct the JSON payload with all available data
         char json_payload[512];  // Increased size to accommodate all data
-        snprintf(json_payload, sizeof(json_payload),
-            "{"
-            "\"local_sensor\":{"
-           		 "\"id\":\"sensor-001\","
-                "\"temperature\":%.2f,"
-                "\"humidity\":%.2f,"
-                "\"latitude\":%.6f,"
-                "\"longitude\":%.6f"
-            "},"
-            "\"remote_sensor\":{"
-                "\"id\":\"%s\","
-                "\"temperature\":%.2f,"
-                "\"humidity\":%.2f,"
-                "\"latitude\":%.6f,"
-                "\"longitude\":%.6f"
-            "}"
-            "}",
-            // Local sensor data (DHT + GPS)
-            latestDHT.temperature,
-            latestDHT.humidity,
-            latestGPS.latitude,
-            latestGPS.longitude,
-            // Remote sensor data (ESP-NOW)
-            latestESPNow.sensor_id,
-            latestESPNow.temperature,
-            latestESPNow.humidity,
-            latestESPNow.latitude,
-            latestESPNow.longitude
-        );
-        
+snprintf(json_payload, sizeof(json_payload),
+    "{"
+    "\"local_sensor\":{"
+        "\"id\":\"sensor-001\","
+        "\"temperature\":%.2f,"
+        "\"humidity\":%.2f,"
+        "\"latitude\":%.6f,"
+        "\"longitude\":%.6f,"
+        "\"battery_voltage\":%.2f"
+    "},"
+    "\"remote_sensor\":{"
+        "\"id\":\"%s\","
+        "\"temperature\":%.2f,"
+        "\"humidity\":%.2f,"
+        "\"latitude\":%.6f,"
+        "\"longitude\":%.6f"
+    "}"
+    "}",
+    // Local sensor data
+    latestDHT.temperature,
+    latestDHT.humidity,
+    latestGPS.latitude,
+    latestGPS.longitude,
+    sim800_battery_voltage, // << ADDED
+    // Remote sensor data
+    latestESPNow.sensor_id,
+    latestESPNow.temperature,
+    latestESPNow.humidity,
+    latestESPNow.latitude,
+    latestESPNow.longitude
+);        
 AlertConfig_t active_config;
 if (xQueuePeek(alertConfigQueue, &active_config, pdMS_TO_TICKS(10)) == pdPASS) {  // Non-blocking read
 
+    
     // === LOCAL SENSOR ALERT HANDLER ===
     if (active_config.is_alerts_on && !isAlertStopLocal) {
         char alert_msg[256];
+        // === GPS MOVEMENT ALERT ===
+        float lat_diff = fabs(latestGPS.latitude - active_config.latitude);
+        float lon_diff = fabs(latestGPS.longitude - active_config.longitude);
+if ((lat_diff > GPS_MOVEMENT_THRESHOLD || lon_diff > GPS_MOVEMENT_THRESHOLD)) {
+        char gps_alert_msg[256];
+        snprintf(gps_alert_msg, sizeof(gps_alert_msg),
+            "MOVEMENT ALERT from sensor-001:\nNew Location: https://maps.google.com/?q=%.6f,%.6f",
+            latestGPS.latitude,
+            latestGPS.longitude
+        );
+        sim800_send_sms(user_phone_number, gps_alert_msg);
+        
+        // Optional: log or throttle alerts
+        ESP_LOGI("SIM800C", "Movement alert sent due to GPS change");
+                    alertCounterLocal++;
+    }
 
         if (latestDHT.temperature != 0 && !(latestDHT.temperature <= active_config.max_temp && latestDHT.temperature >= active_config.min_temp) && !0) {
             snprintf(alert_msg, sizeof(alert_msg),
@@ -426,7 +485,7 @@ if (xQueuePeek(alertConfigQueue, &active_config, pdMS_TO_TICKS(10)) == pdPASS) {
     sim800_wait_response();
     
         // Set the URL for the HTTP POST request
-    sim800_send_command("AT+HTTPPARA=\"URL\",\"197.26.165.184:5000/temphum\"");  // Set the POST URL
+    sim800_send_command("AT+HTTPPARA=\"URL\",\"197.2.134.53:5000/temphum\"");  // Set the POST URL
     sim800_wait_response();
 
     	

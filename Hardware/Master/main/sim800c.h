@@ -18,6 +18,7 @@
 #define RX_PIN             GPIO_NUM_23
 #define BUF_SIZE           1024
 #define AT_CMD_TIMEOUT_MS  2000
+#define GPS_MOVEMENT_THRESHOLD 0.0005
 
 //SMS alerts configuration
 #define user_phone_number  "+21693617570"

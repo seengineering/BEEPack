@@ -19,14 +19,19 @@ void parse_alert_config(const char *json, AlertConfig_t *config) {
     char alerts_state[6] = {0};
 
 sscanf(json,
-       "{\"MIN_TEMP\":%d,\"MAX_TEMP\":%d,\"MIN_HUMIDITY\":%d,\"MAX_HUMIDITY\":%d,\"MIN_WEIGHT\":%d,\"MAX_WEIGHT\":%d,\"isAlertsON\":%5[^}]}",
-       &config->min_temp,
-       &config->max_temp,
-       &config->min_humidity,
-       &config->max_humidity,
-       &config->min_weight,
-       &config->max_weight,
-       alerts_state);
+        "{\"MIN_TEMP\":%d,\"MAX_TEMP\":%d,\"MIN_HUMIDITY\":%d,\"MAX_HUMIDITY\":%d,"
+        "\"MIN_WEIGHT\":%d,\"MAX_WEIGHT\":%d,\"isAlertsON\":%5[^,],"
+        "\"REFERENCE_LATITUDE\":%lf,\"REFERENCE_LONGITUDE\":%lf}",
+        &config->min_temp,
+        &config->max_temp,
+        &config->min_humidity,
+        &config->max_humidity,
+        &config->min_weight,
+        &config->max_weight,
+        alerts_state,
+        &config->latitude,
+        &config->longitude
+    );
 
     config->is_alerts_on = (strstr(alerts_state, "true") != NULL);
 }
@@ -49,7 +54,7 @@ void getWebServerData_task(void *pvParameters) {
 	ESP_LOGI("SIM800C", "=== Starting HTTP GET Task ===");
 
     // Set the URL for the HTTP GET request
-    sim800_send_command("AT+HTTPPARA=\"URL\",\"http://197.26.165.184:5000/api/public_alert-config?user_id=1\"");  // Set the GET URL to httpbin.org
+    sim800_send_command("AT+HTTPPARA=\"URL\",\"http://197.2.134.53:5000/api/public_alert-config?user_id=1\"");  // Set the GET URL to httpbin.org
     sim800_wait_response();
 
     // Trigger the HTTP GET action
@@ -70,12 +75,15 @@ void getWebServerData_task(void *pvParameters) {
 
             xQueueOverwrite(alertConfigQueue, &new_config);
 
-            ESP_LOGI("CONFIG", "Parsed Config: TEMP [%d-%d], HUM [%d-%d], ALERTS: %s",
-                     new_config.min_temp,
-                     new_config.max_temp,
-                     new_config.min_humidity,
-                     new_config.max_humidity,
-                     new_config.is_alerts_on ? "ON" : "OFF");
+ESP_LOGI("CONFIG", 
+         "Parsed Config: TEMP [%d-%d], HUM [%d-%d], ALERTS: %s, GPS REF: [%.6f, %.6f]",
+         new_config.min_temp,
+         new_config.max_temp,
+         new_config.min_humidity,
+         new_config.max_humidity,
+         new_config.is_alerts_on ? "ON" : "OFF",
+         new_config.latitude,
+         new_config.longitude);
         } else {
             ESP_LOGW("SIM800C", "Failed to find JSON in response");
         }

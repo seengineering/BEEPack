@@ -51,6 +51,8 @@ typedef struct {
     int min_weight;
     int max_weight;
     bool is_alerts_on;
+    double latitude;   
+    double longitude; 
 } AlertConfig_t;
 
 extern QueueHandle_t dhtQueue;
