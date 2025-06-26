@@ -51,10 +51,12 @@ void getWebServerData_task(void *pvParameters) {
     AlertConfig_t new_config;
 
 	while(1){
+					  if (xSemaphoreTake(sim800_uart_mutex, portMAX_DELAY) == pdTRUE) {
+
 	ESP_LOGI("SIM800C", "=== Starting HTTP GET Task ===");
 
     // Set the URL for the HTTP GET request
-    sim800_send_command("AT+HTTPPARA=\"URL\",\"http://197.2.134.53:5000/api/public_alert-config?user_id=1\"");  // Set the GET URL to httpbin.org
+    sim800_send_command("AT+HTTPPARA=\"URL\",\"http://102.158.218.196:5000/api/public_alert-config?user_id=1\"");  // Set the GET URL to httpbin.org
     sim800_wait_response();
 
     // Trigger the HTTP GET action
@@ -89,9 +91,13 @@ ESP_LOGI("CONFIG",
         }
         
     ESP_LOGI("SIM800C", "=== HTTP GET Done ===");
-    
+    	    	xSemaphoreGive(sim800_uart_mutex); // release after done
+
    vTaskDelay(pdMS_TO_TICKS(10000));  // 300000 ms = 5 minutes
 
-    }
+    }else{
+	vTaskDelay(pdMS_TO_TICKS(1000)); // Retry if mutex unavailable
+	//mybe send sms say the sim is bussy
+	}
 	
-}
+}}

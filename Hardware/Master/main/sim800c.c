@@ -49,7 +49,6 @@ float sim800_battery_voltage = 0.0;
 void sim800_send_sms(const char *number, const char *message) {
     char buffer[128];
 
-    if (xSemaphoreTake(sim800_uart_mutex, portMAX_DELAY) == pdTRUE) {
         // Set SMS text mode (very important before sending)
         uart_write_bytes(UART_PORT, "AT+CMGF=1\r\n", strlen("AT+CMGF=1\r\n"));
         vTaskDelay(pdMS_TO_TICKS(500));
@@ -66,10 +65,7 @@ void sim800_send_sms(const char *number, const char *message) {
 
         ESP_LOGI(SIM_TAG, "SMS sent to %s: %s", number, message);
 
-        xSemaphoreGive(sim800_uart_mutex);
-    } else {
-        ESP_LOGE(SIM_TAG, "Failed to take sim800_uart_mutex in sim800_send_sms");
-    }
+   
 }
 
 /*
@@ -118,75 +114,60 @@ void sim800c_reset(void){
 }*/
 
 void sim800_send_command(const char *cmd) {
-    if (xSemaphoreTake(sim800_uart_mutex, portMAX_DELAY) == pdTRUE) {
         uart_flush(UART_PORT);
         uart_write_bytes(UART_PORT, cmd, strlen(cmd));
         uart_write_bytes(UART_PORT, "\r\n", 2);  // CR+LF
-        xSemaphoreGive(sim800_uart_mutex);
-    } else {
-        ESP_LOGE("SIM800C", "Failed to take mutex for send_command");
-    }
+   
 }
 
 void sim800_send_raw(const char *data) {
-    if (xSemaphoreTake(sim800_uart_mutex, portMAX_DELAY) == pdTRUE) {
         uart_write_bytes(UART_PORT, data, strlen(data));
         ESP_LOGI("SIM800C", "Sent raw data: %s", data);
-        xSemaphoreGive(sim800_uart_mutex);
-    } else {
-        ESP_LOGE("SIM800C", "Failed to take mutex for send_raw");
-    }
 }
 
 void sim800_wait_response() {
-    if (xSemaphoreTake(sim800_uart_mutex, portMAX_DELAY) == pdTRUE) {
-        uint8_t data[BUF_SIZE];
-        memset(data, 0, sizeof(data));
+    uint8_t data[BUF_SIZE];
+    memset(data, 0, sizeof(data));
 
-        int len = uart_read_bytes(UART_PORT, data, BUF_SIZE - 1, pdMS_TO_TICKS(AT_CMD_TIMEOUT_MS));
-        if (len > 0) {
-            data[len] = '\0';
-            if (strstr((char *)data, "ERROR") != NULL) {
-                error_count++;
-                ESP_LOGE(SIM_TAG, "Response Error:\n%s", (char *)data);
-                ESP_LOGW(SIM_TAG, "Error Number %d", error_count);
-                if (error_count >= max_error_count) {
-    				ESP_LOGI(SIM_TAG, "=== SIM800C Reset ===");
-                    error_count = 0;
-                    //sim800c_reset();
-                    sim800Reset = true;
-                }
-            } else {
-                ESP_LOGI(SIM_TAG, "Response:\n%s", (char *)data);
+    int len = uart_read_bytes(UART_PORT, data, BUF_SIZE - 1, pdMS_TO_TICKS(AT_CMD_TIMEOUT_MS));
+    if (len > 0) {
+        data[len] = '\0';
+        if (strstr((char *)data, "ERROR") != NULL) {
+            error_count++;
+            ESP_LOGE(SIM_TAG, "Response Error:\n%s", (char *)data);
+            ESP_LOGW(SIM_TAG, "Error Number %d", error_count);
+            if (error_count >= max_error_count) {
+                ESP_LOGI(SIM_TAG, "=== SIM800C Reset ===");
+                error_count = 0;
+                sim800Reset = true;
             }
         } else {
-            ESP_LOGW(SIM_TAG, "No response or timeout");
+            ESP_LOGI(SIM_TAG, "Response:\n%s", (char *)data);
         }
-
-        xSemaphoreGive(sim800_uart_mutex);
     } else {
-        ESP_LOGE("SIM800C", "Failed to take mutex for wait_response");
+        ESP_LOGW(SIM_TAG, "No response or timeout");
     }
 }
 float get_sim800_battery_voltage() {
     const char *cmd = "AT+CBC";
     uint8_t data[BUF_SIZE] = {0};
 
-    // Send command
-    sim800_send_command(cmd);
+        uart_flush(UART_PORT); // Clear UART buffer
 
-    // Read response
-    if (xSemaphoreTake(sim800_uart_mutex, portMAX_DELAY) == pdTRUE) {
+        // Send command
+        uart_write_bytes(UART_PORT, cmd, strlen(cmd));
+        uart_write_bytes(UART_PORT, "\r\n", 2);
+
+        // Read response
         int len = uart_read_bytes(UART_PORT, data, BUF_SIZE - 1, pdMS_TO_TICKS(1000));
+
         if (len > 0) {
             data[len] = '\0';
 
-            // Look for +CBC line in the response
             char *cbc_line = strstr((char *)data, "+CBC:");
             if (cbc_line) {
                 int bcs, bcl, voltage_mv;
                 if (sscanf(cbc_line, "+CBC: %d,%d,%d", &bcs, &bcl, &voltage_mv) == 3) {
-                    xSemaphoreGive(sim800_uart_mutex);
                     return voltage_mv / 1000.0f;  // Convert to volts
                 }
             } else {
@@ -195,13 +176,10 @@ float get_sim800_battery_voltage() {
         } else {
             ESP_LOGW("SIM800C", "No data or timeout reading +CBC response");
         }
-        xSemaphoreGive(sim800_uart_mutex);
-    } else {
-        ESP_LOGE("SIM800C", "Failed to take mutex to read CBC");
-    }
+    
 
-    return -1.0f;  // Return invalid value on failure
-}
+    return -1.0f;
+}  
 // === SIM800C Task ===
 void sim800c_task(void *pvParameters) {
 	
@@ -298,9 +276,21 @@ void sim800c_task(void *pvParameters) {
 
 }
 void sim800_http_post_task(void) {
+	
+	static int iteration_count = 0;
+
 
 	while(1)
     {
+
+		  // === Delayed Execution Based on Iteration ===
+        if (iteration_count < 5) {
+            vTaskDelay(pdMS_TO_TICKS(1000));  // 1 second
+        } else {
+            vTaskDelay(pdMS_TO_TICKS(60000));  // 1 minute
+        }
+        iteration_count++;
+  if (xSemaphoreTake(sim800_uart_mutex, portMAX_DELAY) == pdTRUE) {
   if (!sim800Reset){
 			
 		DHTData_t tempDHT;
@@ -312,7 +302,7 @@ void sim800_http_post_task(void) {
 			}
 
 		// Try to receive new GPS data
-		if (xQueueReceive(gpsQueue, &tempGPS, pdMS_TO_TICKS(2000))) {
+		if (xQueueReceive(gpsQueue, &tempGPS, pdMS_TO_TICKS(10))) {
   		  latestGPS = tempGPS;  // Update persistent copy
   		  }  	
 
@@ -321,7 +311,8 @@ void sim800_http_post_task(void) {
             latestESPNow = tempESPNow;
         }
         
-        sim800_battery_voltage = get_sim800_battery_voltage(); 
+       sim800_battery_voltage = get_sim800_battery_voltage();
+
 
         // Construct the JSON payload with all available data
         char json_payload[512];  // Increased size to accommodate all data
@@ -348,7 +339,7 @@ snprintf(json_payload, sizeof(json_payload),
     latestDHT.humidity,
     latestGPS.latitude,
     latestGPS.longitude,
-    sim800_battery_voltage, // << ADDED
+    sim800_battery_voltage, // only for the local
     // Remote sensor data
     latestESPNow.sensor_id,
     latestESPNow.temperature,
@@ -469,43 +460,36 @@ if ((lat_diff > GPS_MOVEMENT_THRESHOLD || lon_diff > GPS_MOVEMENT_THRESHOLD)) {
 }
 
 
-    ESP_LOGI("HTTP POST", "Sending JSON: %s", json_payload);
-	
-    ESP_LOGI("SIM800C", "=== Starting HTTP POST Task ===");
-    
-    // Prepare to send data (specify the length of the data to be sent)
-	char cmd[32];
-	sprintf(cmd, "AT+HTTPDATA=%d,10000", strlen(json_payload));
+ESP_LOGI("HTTP POST", "Sending JSON: %s", json_payload);
+ESP_LOGI("SIM800C", "=== Starting HTTP POST Task ===");
 
-	sim800_send_command(cmd);       // Send AT+HTTPDATA with correct length
-	sim800_wait_response();
+// 1. Set the URL
+sim800_send_command("AT+HTTPPARA=\"URL\",\"http://102.158.218.196:5000/temphum\"");
+sim800_wait_response();
 
-    // Send the actual data (Post data in JSON format)
-    sim800_send_raw(json_payload);  // POST data in JSON format
-    sim800_wait_response();
-    
-        // Set the URL for the HTTP POST request
-    sim800_send_command("AT+HTTPPARA=\"URL\",\"197.2.134.53:5000/temphum\"");  // Set the POST URL
-    sim800_wait_response();
+// 2. (Optional) Ensure content-type is JSON
+sim800_send_command("AT+HTTPPARA=\"CONTENT\",\"application/json\"");
+sim800_wait_response();
 
-    	
-    // Trigger the HTTP POST action
-    sim800_send_command("AT+HTTPACTION=1");  // 1 indicates a POST request
-    sim800_wait_response();  // Wait for response, typically HTTP status code, e.g., +HTTPACTION: 1,200,<data_length>
-    
-    // Read server response (you can print this for debugging)
-    sim800_send_command("AT+HTTPREAD");  // Read the server's response
-    sim800_wait_response();
+// 3. Prepare to send data
+char cmd[32];
+sprintf(cmd, "AT+HTTPDATA=%d,10000", strlen(json_payload));
+sim800_send_command(cmd);
+sim800_wait_response();  // Wait for DOWNLOAD
 
-    // Terminate the HTTP session (clean up resources)
-    //sim800_send_command("AT+HTTPTERM");  // Terminate HTTP service
-   //sim800_wait_response();
+// 4. Send the JSON body
+sim800_send_raw(json_payload);
+sim800_wait_response();
 
-    // Deactivate the bearer profile (optional but recommended to release resources)
-    //sim800_send_command("AT+SAPBR=0,1");  // Deactivate bearer profile
-    //sim800_wait_response();
+// 5. Trigger POST action
+sim800_send_command("AT+HTTPACTION=1");
+sim800_wait_response();  // Will return: +HTTPACTION: 1,200,<data_len>
 
-    ESP_LOGI("SIM800C", "=== HTTP POST Done ===");
+// 6. Read server response
+sim800_send_command("AT+HTTPREAD");
+sim800_wait_response();
+
+ESP_LOGI("SIM800C", "=== HTTP POST Done ===");
     
     
 	
@@ -514,10 +498,10 @@ if ((lat_diff > GPS_MOVEMENT_THRESHOLD || lon_diff > GPS_MOVEMENT_THRESHOLD)) {
     }else{
 	ESP_LOGI(SIM_TAG, "=== Start SIM800C Reset ===");
 
+	// Wait for SIM800C boot
 	sim800_send_command("AT+CFUN=1,1");
     vTaskDelay(pdMS_TO_TICKS(10000));
-
-   
+    
     sim800_send_command("AT");
     sim800_wait_response();
     
@@ -554,11 +538,11 @@ if ((lat_diff > GPS_MOVEMENT_THRESHOLD || lon_diff > GPS_MOVEMENT_THRESHOLD)) {
     // Set up the CID (context ID for the bearer profile)
     sim800_send_command("AT+HTTPPARA=\"CID\",1");  // Set CID to 1
     sim800_wait_response();
-
+/*
     // Set the URL for the HTTP POST request
-    sim800_send_command("AT+HTTPPARA=\"URL\",\"197.14.101.52:5000/temphum\"");  // Set the POST URL
+    sim800_send_command("AT+HTTPPARA=\"URL\",\"102.158.218.196:5000/temphum\"");  // Set the POST URL
     sim800_wait_response();
-    
+    */
     // Specify content type (application/json for JSON data)
     sim800_send_command("AT+HTTPPARA=\"CONTENT\",\"application/json\"");  // Set the content type for JSON
     sim800_wait_response();
@@ -567,13 +551,21 @@ if ((lat_diff > GPS_MOVEMENT_THRESHOLD || lon_diff > GPS_MOVEMENT_THRESHOLD)) {
     uart_write_bytes(UART_PORT, "AT+CMGF=1\r\n", strlen("AT+CMGF=1\r\n"));
     
     sim800Reset = false;
+    iteration_count = 0;
     
     ESP_LOGI(SIM_TAG, "=== End SIM800C Reset ===");
+    
 
-	}
+	} 	
+	xSemaphoreGive(sim800_uart_mutex); // release after done
+
+}else
+{
 	
-		//SIM800c task delay
-    	vTaskDelay(pdMS_TO_TICKS(5000));  // 5s
+	vTaskDelay(pdMS_TO_TICKS(1000));
+}
+	
+      
     }
     
   }

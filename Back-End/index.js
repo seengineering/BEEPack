@@ -747,7 +747,32 @@ MIN_TEMP: 32,
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+//get sensor data from sim800c 
+app.get('/api/public_get_sensor_data', async (req, res) => {
+  const { user_id, sensor_id } = req.query;
 
+  const query = `
+SELECT sd.*
+FROM beehives b
+JOIN users u ON u.user_id = b.user_id
+JOIN sensors_data sd ON sd.sensor_id = b.sensor_id
+WHERE u.user_id = $1
+  AND b.sensor_id = $2
+ORDER BY sd.created_at DESC
+LIMIT 1;
+  `;
+
+  try {
+    const result = await db.query(query, [user_id, sensor_id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Sensor not found for this user' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
 // === GET SMS Alerts Configuration From database ===
 app.get("/api/sms-alert-settings", async (req, res) => {
   if (!req.isAuthenticated()) {

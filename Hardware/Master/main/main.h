@@ -15,9 +15,9 @@
 #include "dht22.h"
 #include "HX711.h"
 #include "gps.h"
-#include "smsControl.h"
 #include "getWebServerData.h"
 #include "esp_now.h"
+#include "smsControl.h"
 
 #define WIFI_SSID      "TOPNET_3D78"
 #define WIFI_PASSWORD  "Hafiene2025"
@@ -33,7 +33,6 @@ typedef struct {
     float latitude;
     float longitude;
 } GPSData_t;
-
 // In your main.h or at the top of your file
 typedef struct {
     char sensor_id[12];

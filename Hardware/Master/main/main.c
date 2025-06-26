@@ -17,6 +17,7 @@ QueueHandle_t dhtQueue;
 QueueHandle_t gpsQueue;
 QueueHandle_t espnowQueue;  // Add this with your other queue definitions
 QueueHandle_t alertConfigQueue;
+
 SemaphoreHandle_t sim800_uart_mutex = NULL;
 
 typedef struct __attribute__((packed)) {
@@ -143,11 +144,11 @@ void sim800c_init(void){
     // Set up the CID (context ID for the bearer profile)
     sim800_send_command("AT+HTTPPARA=\"CID\",1");  // Set CID to 1
     sim800_wait_response();
-
+/*
     // Set the URL for the HTTP POST request
-    sim800_send_command("AT+HTTPPARA=\"URL\",\"197.2.134.53:5000/temphum\"");  // Set the POST URL
+    sim800_send_command("AT+HTTPPARA=\"URL\",\"102.158.218.196:5000/temphum\"");  // Set the POST URL
     sim800_wait_response();
-    
+    */
     // Specify content type (application/json for JSON data)
     sim800_send_command("AT+HTTPPARA=\"CONTENT\",\"application/json\"");  // Set the content type for JSON
     sim800_wait_response();
@@ -183,10 +184,12 @@ void sim800c_init(void){
 void app_main(void) {
 	// Create the queue with space for 5 SensorData_t elements
 // Create queues
+
     dhtQueue = xQueueCreate(30, sizeof(DHTData_t));
     gpsQueue = xQueueCreate(30, sizeof(GPSData_t));
     espnowQueue = xQueueCreate(30, sizeof(sensor_data_t));  // Buffer 10 messages
     alertConfigQueue = xQueueCreate(1, sizeof(AlertConfig_t));
+    
     if (dhtQueue == NULL || gpsQueue == NULL || espnowQueue == NULL) {
         ESP_LOGE(TAG, "Queue creation failed");
         return;
@@ -215,13 +218,13 @@ void app_main(void) {
   
   //xTaskCreate(gps_task, "gps_task", 4096, NULL, 6, NULL);
   
-  xTaskCreate(sim800c_task, "sim800c_task", 8192, NULL, 6, NULL);
+  xTaskCreate(sim800c_task, "sim800c_task", 8192, NULL, 5, NULL);
   
-  //xTaskCreate(sms_control_task, "sms_control_task", 4096, NULL, 4, NULL);
+  xTaskCreate(sms_control_task, "sms_control_task", 8192, NULL, 6, NULL);
 
-  xTaskCreate(espnow_receiver_task, "espnow_receiver_task", 4096, NULL, 6, NULL);
+  xTaskCreate(espnow_receiver_task, "espnow_receiver_task", 4096, NULL, 5, NULL);
  
-   xTaskCreate(getWebServerData_task, "getWebServerData_task", 4096, NULL, 6, NULL);
+  xTaskCreate(getWebServerData_task, "getWebServerData_task", 4096, NULL, 6, NULL);
 
   ESP_LOGI(TAG, "ESP-NOW Receiver initialized and waiting for data...");
 

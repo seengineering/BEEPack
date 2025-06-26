@@ -5,9 +5,11 @@ import MainDashboard from "views/admin/detailed-dashboard";
 import AllHives from "views/admin/all-hives";
 import Profile from "views/admin/profile";
 import DataTables from "views/admin/allerts_settings";
-import RTLDefault from "views/rtl/default";
+import { GoAlert } from "react-icons/go";
 import { GiBeehive } from "react-icons/gi";
-import { IoMdSettings } from "react-icons/io";
+import { GiHoneycomb } from "react-icons/gi";
+import { FaRegAddressCard } from "react-icons/fa";
+import { MdOutlineAppSettingsAlt } from "react-icons/md";
 
 // Auth Imports
 import SignIn from "views/auth/SignIn";
@@ -33,21 +35,28 @@ const routes = [
     name: "Dashboard",
     layout: "/admin",
     path: "detailed-dashboard",
-    icon: <MdHome className="h-6 w-6" />,
+    icon: <GiHoneycomb className="h-6 w-6" />,
     component: <MainDashboard />,
   },
   {
-    name: "Settings",
+    name: "SMS Settings",
     layout: "/admin",
-    icon: <IoMdSettings className="h-6 w-6" />,
-    path: "Settings",
+    icon: <MdOutlineAppSettingsAlt className="h-6 w-6" />,
+    path: "SMS_Settings",
     component: <DataTables />,
   },
   {
-    name: "Profile",
+    name: "Experiance",
     layout: "/admin",
-    path: "profile",
-    icon: <MdPerson className="h-6 w-6" />,
+    path: "Experiance",
+    icon: <FaRegAddressCard className="h-6 w-6" />,
+    component: <Profile />,
+  },
+  {
+    name: "Alerts",
+    layout: "/admin",
+    path: "Alerts",
+    icon: <GoAlert className="h-6 w-6" />,
     component: <Profile />,
   },
   {

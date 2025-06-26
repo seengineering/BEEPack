@@ -40,7 +40,7 @@ void dht_test(void *pvParameters)
         DHTData_t data;
         data.temperature = temperature;
         data.humidity = humidity;
-        xQueueSend(dhtQueue, &data, portMAX_DELAY);
+        xQueueSend(dhtQueue, &data, pdMS_TO_TICKS(1000));
     } else {
         ESP_LOGE("DHT21_Example", "Failed to read from DHT sensor: %s", esp_err_to_name(res));
     }
