@@ -49,38 +49,89 @@ const HiveCard = ({
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    const checkHiveHealth = (Temperature, Humidity) => {
-      const MIN_TEMP = 32;
-      const MAX_TEMP = 36;
-      const MIN_HUMIDITY = 50;
-      const MAX_HUMIDITY = 70;
+useEffect(() => {
+  const checkHiveHealth = async (Temperature, Humidity) => {
+    const MIN_TEMP = 32;
+    const MAX_TEMP = 36;
+    const MIN_HUMIDITY = 50;
+    const MAX_HUMIDITY = 70;
 
-      if (Temperature === null || Humidity === null) {
-        onHealthStatusChange("No Data");
-        return "No Data";
+    if (Temperature === null || Humidity === null) {
+      return "No Data";
+    }
+
+    if (
+      Temperature >= MIN_TEMP &&
+      Temperature <= MAX_TEMP &&
+      Humidity >= MIN_HUMIDITY &&
+      Humidity <= MAX_HUMIDITY
+    ) {
+      return "Healthy";
+    }
+
+    // Determine specific issues
+    let alertType = "hive_health";
+    let statusMessage = "Unhealthy - ";
+    let issues = [];
+
+    if (Temperature < MIN_TEMP) {
+      issues.push(`Low Temperature (${Temperature}°C)`);
+      alertType = "temperature_alert";
+    } else if (Temperature > MAX_TEMP) {
+      issues.push(`High Temperature (${Temperature}°C)`);
+      alertType = "temperature_alert";
+    }
+
+    if (Humidity < MIN_HUMIDITY) {
+      issues.push(`Low Humidity (${Humidity}%)`);
+      alertType = issues.length > 1 ? "combined_alert" : "humidity_alert";
+    } else if (Humidity > MAX_HUMIDITY) {
+      issues.push(`High Humidity (${Humidity}%)`);
+      alertType = issues.length > 1 ? "combined_alert" : "humidity_alert";
+    }
+
+    statusMessage += issues.join(" and ");
+
+    // Log alert to database
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/alerts-history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          alert_type: alertType,
+          status: statusMessage,
+          sensor_id: id // Replace with actual sensor ID
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to log alert');
       }
+    } catch (error) {
+      console.error('Error logging alert:', error);
+    }
 
-      if (
-        Temperature >= MIN_TEMP &&
-        Temperature <= MAX_TEMP &&
-        Humidity >= MIN_HUMIDITY &&
-        Humidity <= MAX_HUMIDITY
-      ) {
-        onHealthStatusChange("Healthy");
-        return "Healthy";
-      }
-      onHealthStatusChange("Unhealthy");
-      return "Unhealthy";
-    };
+    return "Unhealthy";
+  };
 
-    setHealthStatus(checkHiveHealth(Temperature, Humidity));
-  }, [Temperature, Humidity]);
-  useEffect(() => {
+  // Call the function and update state
+  const updateHealthStatus = async () => {
+    const status = await checkHiveHealth(Temperature, Humidity);
+    onHealthStatusChange(status); // Make sure this is called
+    setHealthStatus(status); // Update local state if needed
+  };
+
+  updateHealthStatus();
+}, [Temperature, Humidity]);
+
+
+useEffect(() => {
     const sendHiveState = async () => {
       try {
         await fetch(`${process.env.REACT_APP_API_URL}/admin/insertState`, {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -95,6 +146,7 @@ const HiveCard = ({
     };
     sendHiveState();
   }, [healthStatus, id]);
+
   ////////// check if the gps i putted correct ////////
   useEffect(() => {
     const fetchLocation = async () => {

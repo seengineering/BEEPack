@@ -548,28 +548,41 @@ app.get("/admin/getHiveLocation", async (req, res) => {
 });
 // api that update only sate in sensors_data table for the most recent one !!
 app.post("/admin/insertState", async (req, res) => {
+    if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
   const { healthStatus, id } = req.body;
+  const user_id = req.user.user_id; // Get user_id from authenticated session
 
   try {
-    await db.query(
-      `
-      UPDATE sensors_data
-      SET hive_state = $1
-      WHERE sensor_id = $2
-      AND data_id = (
-        SELECT data_id FROM sensors_data
-        WHERE sensor_id = $2
-        ORDER BY timestamp DESC
-        LIMIT 1
-      )
-    `,
-      [healthStatus, id]
+    // Update only if the beehive belongs to the authenticated user
+    const result = await db.query(
+      `UPDATE beehives
+       SET health_status = $1,
+           updated_at = NOW()
+       WHERE user_id = $2 AND sensor_id = $3
+       RETURNING *`,
+      [healthStatus, user_id, id]
     );
 
-    res.status(200).json({ message: "Most recent state updated" });
+    if (result.rowCount === 0) {
+      return res.status(404).json({ 
+        error: "Beehive not found or not owned by user" 
+      });
+    }
+
+    res.status(200).json({ 
+      success: true,
+      message: "Beehive state updated",
+      beehive: result.rows[0]
+    });
   } catch (err) {
-    console.error("DB error:", err);
-    res.status(500).json({ error: "Database update failed" });
+    console.error("Database error:", err);
+    res.status(500).json({ 
+      error: "Database update failed",
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 app.get("/admin/current-sensor", (req, res) => {
@@ -920,8 +933,52 @@ app.delete("/api/delete-hive", async (req, res) => {
   }
 });
 
+//////////////////////////////// Alerts History APIS ///////////////////////////
+// Get Alerts history API 
+app.get('/api/alerts-history', async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
+  const userId = req.user.user_id; // the logged-in user ID from the session
 
+  try {
+    const result = await db.query(
+      'SELECT * FROM alerts_history WHERE user_id = $1 ORDER BY date DESC',
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching alerts_history:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+// insert Alerts history API 
+app.post('/api/alerts-history', async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const { alert_type, status, sensor_id } = req.body;
+    const userId = req.user.user_id; // from passport session
+if (!alert_type || !status || !sensor_id) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const result = await db.query(
+      `INSERT INTO alerts_history (user_id, alert_type, status, sensor_id)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [userId, alert_type, status, sensor_id]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error inserting alert:', err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${port}`);

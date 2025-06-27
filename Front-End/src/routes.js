@@ -3,7 +3,8 @@ import React from "react";
 // Admin Imports
 import MainDashboard from "views/admin/detailed-dashboard";
 import AllHives from "views/admin/all-hives";
-import Profile from "views/admin/profile";
+import Experiance from "views/admin/experiance";
+import Alerts from "views/admin/alerts";
 import DataTables from "views/admin/allerts_settings";
 import { GoAlert } from "react-icons/go";
 import { GiBeehive } from "react-icons/gi";
@@ -50,14 +51,14 @@ const routes = [
     layout: "/admin",
     path: "Experiance",
     icon: <FaRegAddressCard className="h-6 w-6" />,
-    component: <Profile />,
+    component: <Experiance />,
   },
   {
     name: "Alerts",
     layout: "/admin",
     path: "Alerts",
     icon: <GoAlert className="h-6 w-6" />,
-    component: <Profile />,
+    component: <Alerts />,
   },
   {
     name: "Sign In",
