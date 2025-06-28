@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import MiniCalendar from "components/calendar/MiniCalendar";
 import PieChartCard from "views/admin/detailed-dashboard/components/PieChartCard";
 import Chart from "./components/TempHumChart";
+import WeightChart from "./components/weightChart";
 import { FaTemperatureQuarter } from "react-icons/fa6";
 import { WiHumidity } from "react-icons/wi";
 import { GiWeight } from "react-icons/gi";
@@ -20,6 +21,7 @@ import MultipleSelectChip from "./components/Selecthive";
 import Widget from "components/widget/Widget";
 import { MdDelete } from "react-icons/md";
 import { useNavigate } from 'react-router-dom'; 
+import WeeklyRevenue from "views/admin/detailed-dashboard/components/WeeklyRevenue";
 
 const Dashboard = () => {
   const [allSensorData, setAllSensorData] = useState([]);
@@ -275,7 +277,11 @@ const handleDeleteHive = async () => {
         <Widget
           icon={<GiWeight className="h-7 w-7" />}
           title={"Weight"}
-          subtitle={"Available Soon"}
+subtitle={
+    latestSensor?.weight != null
+      ? `${latestSensor.weight} Kg`
+      : "Loading..."
+  }
         />
         <Widget
           icon={<IoLocation className="h-6 w-6" />}
@@ -312,7 +318,11 @@ const handleDeleteHive = async () => {
 
       <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
         <Chart allSensorData={allSensorData} />
-        {latestSensor ? (
+        <WeightChart allSensorData={allSensorData} />
+
+      </div>
+      <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-1">
+{latestSensor ? (
           <MapComponent
             lat={latestSensor.latitude}
             lng={latestSensor.longitude}

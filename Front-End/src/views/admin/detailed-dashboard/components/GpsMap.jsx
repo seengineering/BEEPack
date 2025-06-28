@@ -34,6 +34,9 @@ const MapComponent = ({ lat, lng }) => {
 
   return (
     <Card extra="flex flex-col bg-white w-full rounded-3xl py-6 px-2 text-center">
+      <h2 className="text-lg font-bold text-navy-700 dark:text-white">
+          Real Time GPS Location
+        </h2>
       <div className="mb-auto flex items-center justify-between px-6">
         <div id="map" style={{ height: "400px", width: "100%" }} />{" "}
       </div>

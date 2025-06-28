@@ -1,9 +1,4 @@
 import React, { useState } from "react";
-import {
-  MdArrowDropUp,
-  MdOutlineCalendarToday,
-  MdBarChart,
-} from "react-icons/md";
 import Card from "components/card";
 import { lineChartOptionsTotalSpent } from "variables/charts";
 import LineChart from "components/charts/LineChart";
@@ -12,142 +7,109 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { MdChevronRight } from "react-icons/md";
-
 import Alert from "@mui/material/Alert";
 
 export default function TempHumChart({ allSensorData = [] }) {
   const [startDate, setStartDate] = useState(dayjs());
   const [endDate, setEndDate] = useState(dayjs());
   const [currentSelectedData, setCurrentSelectedData] = useState([]);
-  const [isFetchButtonClicked, setIsFetchButtonClicked] = useState(false);
   const [isDataRangeCorrect, setIsDataRangeCorrect] = useState(true);
 
+  // process only weight
   const allReading =
     allSensorData
       ?.filter(
         (sensor) =>
           sensor.timestamp &&
-          sensor.temperature !== undefined &&
-          sensor.humidity !== undefined
+          sensor.weight !== undefined
       )
       ?.map((sensor) => ({
         time: new Date(sensor.timestamp),
-        temp: sensor.temperature,
-        hum: sensor.humidity,
+        weight: sensor.weight,
       })) || [];
-  console.log(allReading);
+
   const prepareChartData = (sensorData) => {
     return [
       {
-        name: "Temperature (°C)",
-        data: sensorData.map((item) => parseFloat(item.temp)),
-        color: "#D22B2B", // Purple for temperature
-      },
-      {
-        name: "Humidity (%)",
-        data: sensorData.map((item) => parseFloat(item.hum)),
-        color: "#6AD2FF", // Light blue for humidity
+        name: "Weight (kg)",
+        data: sensorData.map((item) => parseFloat(item.weight)),
+        color: "#2E8B57", // forest green
       },
     ];
   };
-  // Prepare categories (time labels) for x-axis
+
   const prepareCategories = (sensorData) => {
-    return sensorData.map(
-      (item) => dayjs(item.time).format("HH:mm") // Format as "17:15"
-      // Alternatively: dayjs(item.time).format('DD/MM HH:mm') for date+time
+    return sensorData.map((item) =>
+      dayjs(item.time).format("HH:mm")
     );
   };
-  // Update chart options with dynamic categories
-  const lineChartOptions = {
-  ...lineChartOptionsTotalSpent, // Spread the existing options
-  chart: {
-    ...lineChartOptionsTotalSpent.chart,
-    toolbar: {
-      show: true,
-    },
-    animations: {
-      enabled: false, //Disables all animations
-    },
-  },
-  xaxis: {
-    ...lineChartOptionsTotalSpent.xaxis,
-    categories: prepareCategories(
-      currentSelectedData.length > 0
-        ? currentSelectedData
-        : allReading.slice(-24)
-    ),
-    labels: {
-      ...lineChartOptionsTotalSpent.xaxis.labels,
-      formatter: function (value) {
-        return value; // Use the formatted time string directly
-      },
-    },
-    type: "category", // Better for time series
-  },
-  tooltip: {
-    ...lineChartOptionsTotalSpent.tooltip,
-    x: {
-      format: "dd/MM/yy HH:mm", // Keep detailed format in tooltip
-    },
-  },
-  yaxis: [
-    {
-      title: {
-        text: "Temperature (°C)",
-        style: {
-          color: "#D22B2B",
-        },
-      },
-      labels: {
-        style: {
-          colors: "#D22B2B",
-        },
-        formatter: function (value) {
-          return value.toFixed(1); // Format temperature to 1 decimal place
-        },
-      },
-      min: 0,
-      max: 100,
-      tickAmount: 10,
-    },
-    {
-      opposite: true, // Place on the right side
-      title: {
-        text: "Humidity (%)",
-        style: {
-          color: "#6AD2FF",
-        },
-      },
-      labels: {
-        style: {
-          colors: "#6AD2FF",
-        },
-        formatter: function (value) {
-          return value.toFixed(1); // Format humidity to 1 decimal place
-        },
-      },
-      min: 0,
-      max: 100,
-      tickAmount: 10,
-    },
-  ],
-};
 
-  ///Fetch button handler ///
+  const lineChartOptions = {
+    ...lineChartOptionsTotalSpent,
+    chart: {
+      ...lineChartOptionsTotalSpent.chart,
+      toolbar: {
+        show: true,
+      },
+      animations: {
+        enabled: false,
+      },
+    },
+    xaxis: {
+      ...lineChartOptionsTotalSpent.xaxis,
+      categories: prepareCategories(
+        currentSelectedData.length > 0
+          ? currentSelectedData
+          : allReading.slice(-24)
+      ),
+      labels: {
+        ...lineChartOptionsTotalSpent.xaxis.labels,
+        formatter: function (value) {
+          return value;
+        },
+      },
+      type: "category",
+    },
+    tooltip: {
+      ...lineChartOptionsTotalSpent.tooltip,
+      x: {
+        format: "dd/MM/yy HH:mm",
+      },
+    },
+    yaxis: [
+      {
+        title: {
+          text: "Weight (kg)",
+          style: {
+            color: "#2E8B57",
+          },
+        },
+        labels: {
+          style: {
+            colors: "#2E8B57",
+          },
+          formatter: function (value) {
+            return value.toFixed(1);
+          },
+        },
+        min: 0,
+        max: 100, // adjust this to match your expected weight range
+        tickAmount: 10,
+      },
+    ],
+  };
+
   function fetchChartHandler() {
-    // Convert Day.js objects to JavaScript Date objects
     const start = new Date(startDate.startOf("day").toDate());
     const end = new Date(endDate.endOf("day").toDate());
 
-    // Filter data within the selected date range
     const filteredData = allReading.filter((reading) => {
       const readingTime = reading.time;
       return readingTime >= start && readingTime <= end;
     });
 
     setCurrentSelectedData(filteredData);
-    setIsFetchButtonClicked(true);
-    console.log("Filtered data:", filteredData); // For debugging
+
     if (filteredData.length === 0) {
       setIsDataRangeCorrect(false);
     } else {
@@ -157,17 +119,16 @@ export default function TempHumChart({ allSensorData = [] }) {
 
   return (
     <Card extra="!p-[20px] text-center">
-      {!isDataRangeCorrect ? (
+      {!isDataRangeCorrect && (
         <div className="mb-2">
           <Alert severity="warning">
             Invalid date range: End date must be after Start date!
           </Alert>
         </div>
-      ) : null}
+      )}
 
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         <div className="flex w-full items-center gap-4">
-          {/* Start Date - Takes available space */}
           <div className="min-w-[150px] flex-1">
             <DateTimePicker
               label="Start Date"
@@ -183,7 +144,6 @@ export default function TempHumChart({ allSensorData = [] }) {
             />
           </div>
 
-          {/* End Date - Takes available space */}
           <div className="min-w-[150px] flex-1">
             <DateTimePicker
               label="End Date"
@@ -199,7 +159,6 @@ export default function TempHumChart({ allSensorData = [] }) {
             />
           </div>
 
-          {/* Button - Fixed width */}
           <button
             className="flex shrink-0 items-center whitespace-nowrap rounded-xl bg-brand-500 px-4 py-3 text-base font-medium text-white hover:bg-brand-600 active:bg-brand-700 dark:bg-brand-400 dark:hover:bg-brand-300"
             onClick={fetchChartHandler}
@@ -220,8 +179,6 @@ export default function TempHumChart({ allSensorData = [] }) {
             )}
           />
         </div>
-        {/*
-         */}
       </div>
     </Card>
   );

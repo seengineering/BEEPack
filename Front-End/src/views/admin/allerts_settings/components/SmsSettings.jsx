@@ -81,8 +81,8 @@ useEffect(() => {
       setWeightMin(data.MIN_WEIGHT);
       setWeightMax(data.MAX_WEIGHT);
       setSmsEnabled(data.isAlertsON);
-      setRefLat(data.REFERENCE_LATITUDE)
-      setRefLng(data.REFERENCE_LONGITUDE)
+      setRefLat(data.REFERENCE_LATITUDE ?? 35.5024);
+      setRefLng(data.REFERENCE_LONGITUDE ?? 11.0457);
     } catch (error) {
       console.error("Failed to fetch alert settings:", error);
       // You can optionally leave the default values as-is here
@@ -311,9 +311,13 @@ const handleSearchKey = async (e) => {
       <Marker position={[refLat, refLng]} />
     </MapContainer>
   </div>
-  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-    Selected Location: <strong>{refLat.toFixed(6)}, {refLng.toFixed(6)}</strong>
-  </p>
+ <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+  Selected Location:{" "}
+  <strong>
+    {refLat != null ? refLat.toFixed(6) : "N/A"},{" "}
+    {refLng != null ? refLng.toFixed(6) : "N/A"}
+  </strong>
+</p>
 </div>
 
         {/* Centered Save Button */}
