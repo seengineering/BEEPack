@@ -47,18 +47,18 @@ const routes = [
     component: <DataTables />,
   },
   {
-    name: "Experiance",
-    layout: "/admin",
-    path: "Experiance",
-    icon: <FaRegAddressCard className="h-6 w-6" />,
-    component: <Experiance />,
-  },
-  {
     name: "Alerts",
     layout: "/admin",
     path: "Alerts",
     icon: <GoAlert className="h-6 w-6" />,
     component: <Alerts />,
+  },
+  {
+    name: "Experiance",
+    layout: "/admin",
+    path: "Experiance",
+    icon: <FaRegAddressCard className="h-6 w-6" />,
+    component: <Experiance />,
   },
   {
     name: "Sign In",

@@ -278,7 +278,7 @@ void sim800c_task(void *pvParameters) {
 void sim800_http_post_task(void) {
 	
 	static int iteration_count = 0;
-
+	
 
 	while(1)
     {
@@ -292,7 +292,9 @@ void sim800_http_post_task(void) {
         iteration_count++;
   if (xSemaphoreTake(sim800_uart_mutex, portMAX_DELAY) == pdTRUE) {
   if (!sim800Reset){
-			
+		char command[128];
+		char ip_address[] = "102.159.97.105";
+
 		DHTData_t tempDHT;
 		GPSData_t tempGPS;
         ESPNowData_t tempESPNow;
@@ -463,8 +465,13 @@ if ((lat_diff > GPS_MOVEMENT_THRESHOLD || lon_diff > GPS_MOVEMENT_THRESHOLD)) {
 ESP_LOGI("HTTP POST", "Sending JSON: %s", json_payload);
 ESP_LOGI("SIM800C", "=== Starting HTTP POST Task ===");
 
-// 1. Set the URL
-sim800_send_command("AT+HTTPPARA=\"URL\",\"http://102.158.218.196:5000/temphum\"");
+// build the command dynamically
+snprintf(command, sizeof(command),
+    "AT+HTTPPARA=\"URL\",\"http://%s:5000/temphum\"",
+    ip_address);
+
+// send it
+sim800_send_command(command);
 sim800_wait_response();
 
 // 2. (Optional) Ensure content-type is JSON

@@ -979,6 +979,62 @@ if (!alert_type || !status || !sensor_id) {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+// heath status counts api 
+app.get('/api/health-status-count', async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const userId = req.user.user_id;
+
+  try {
+    const result = await db.query(
+      `
+      SELECT health_status, COUNT(*) AS count
+      FROM beehives
+      WHERE user_id = $1
+      GROUP BY health_status
+      ORDER BY health_status;
+      `,
+      [userId]
+    );
+
+    // Return rows like [{ health_status: "Healthy", count: 5 }, ...]
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching health status counts:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+app.get("/api/healthy-hives-week", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const userId = req.user.user_id;
+
+  try {
+    const result = await db.query(
+      `
+      SELECT
+        to_char(updated_at::date, 'YYYY-MM-DD') as day,
+        COUNT(*) as healthy_count
+      FROM beehives
+      WHERE user_id = $1
+        AND health_status = 'Healthy'
+        AND updated_at >= CURRENT_DATE - INTERVAL '6 days'
+      GROUP BY day
+      ORDER BY day ASC;
+      `,
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching weekly healthy counts", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${port}`);

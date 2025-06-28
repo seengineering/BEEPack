@@ -21,6 +21,8 @@ void sms_control_task(void *pvParameters) {
     int total_len = 0, len = 0;  // Declare here
 
     while (1) {
+				char ip_address[] = "102.159.97.105";
+				int user_id = 1;
 			  if (xSemaphoreTake(sim800_uart_mutex, portMAX_DELAY) == pdTRUE) {
 				  
 				//Delete all message if memory full  
@@ -64,19 +66,21 @@ void sms_control_task(void *pvParameters) {
 
                 // Get next line (message body)
                 char *body = strtok(NULL, "\r\n");
-                
+
                 if (body != NULL && index > 0) {
                     ESP_LOGI(TAG_SMS, "SMS from %s: %s", number, body);
 
-                        // Compose HTTP URL using sensor_id from SMS body
-                        char url[256];
-                        snprintf(url, sizeof(url), "http://102.158.218.196:5000/api/public_get_sensor_data?user_id=1&sensor_id=%s", body);
+					char url[256];
+					snprintf(url, sizeof(url),
+   					 "http://%s:5000/api/public_get_sensor_data?user_id=%d&sensor_id=%s",
+   						 ip_address, user_id, body);
 
-                        char cmd[300];
-                        snprintf(cmd, sizeof(cmd), "AT+HTTPPARA=\"URL\",\"%s\"", url);
-                        sim800_send_command(cmd);
-                        sim800_wait_response();
+						char cmd[300];
+						snprintf(cmd, sizeof(cmd),
+  						  "AT+HTTPPARA=\"URL\",\"%s\"", url);
 
+						sim800_send_command(cmd);
+						sim800_wait_response();
                         sim800_send_command("AT+HTTPACTION=0");
                         sim800_wait_response();
 

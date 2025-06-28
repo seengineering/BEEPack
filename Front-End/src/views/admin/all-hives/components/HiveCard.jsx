@@ -120,13 +120,29 @@ useEffect(() => {
     const status = await checkHiveHealth(Temperature, Humidity);
     onHealthStatusChange(status); // Make sure this is called
     setHealthStatus(status); // Update local state if needed
-  };
 
+    try {
+      await fetch(`${process.env.REACT_APP_API_URL}/admin/insertState`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          healthStatus: status,
+          id,
+        }),
+      });
+    } catch (err) {
+      console.error("Error sending health status:", err);
+    }
+  
+  };
   updateHealthStatus();
 }, [Temperature, Humidity]);
 
 
-useEffect(() => {
+{/*useEffect(() => {
     const sendHiveState = async () => {
       try {
         await fetch(`${process.env.REACT_APP_API_URL}/admin/insertState`, {
@@ -145,7 +161,7 @@ useEffect(() => {
       }
     };
     sendHiveState();
-  }, [healthStatus, id]);
+  }, [healthStatus, id]);*/}
 
   ////////// check if the gps i putted correct ////////
   useEffect(() => {

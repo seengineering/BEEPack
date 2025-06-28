@@ -23,6 +23,8 @@
 #define WIFI_PASSWORD  "Hafiene2025"
 #define WIFI_CONNECTED_BIT BIT0
 extern SemaphoreHandle_t sim800_uart_mutex;
+extern char ip_address[];
+extern int user_id;
 
 typedef struct {
     float temperature;

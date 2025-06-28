@@ -209,16 +209,16 @@ void app_main(void) {
 	//init Uart
 	
 	sim800_UART_init();
-   	//GPS_UART_init();
+   	GPS_UART_init();
    	 sim800c_init();
    	 
   /////////////////////////////////////////////// Start tasks ////////////////////////////////////
  
   xTaskCreate(dht_test, "dht21_task", 4096, NULL, 6, NULL);
   
-  //xTaskCreate(gps_task, "gps_task", 4096, NULL, 6, NULL);
+  xTaskCreate(gps_task, "gps_task", 4096, NULL, 6, NULL);
   
-  xTaskCreate(sim800c_task, "sim800c_task", 8192, NULL, 5, NULL);
+  xTaskCreate(sim800c_task, "sim800c_task", 8192, NULL, 6, NULL);
   
   xTaskCreate(sms_control_task, "sms_control_task", 8192, NULL, 6, NULL);
 

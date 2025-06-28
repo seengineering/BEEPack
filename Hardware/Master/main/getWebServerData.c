@@ -52,12 +52,18 @@ void getWebServerData_task(void *pvParameters) {
 
 	while(1){
 					  if (xSemaphoreTake(sim800_uart_mutex, portMAX_DELAY) == pdTRUE) {
+char command[256];
+char ip_address[] = "102.159.97.105";
+int user_id = 1;
 
 	ESP_LOGI("SIM800C", "=== Starting HTTP GET Task ===");
 
-    // Set the URL for the HTTP GET request
-    sim800_send_command("AT+HTTPPARA=\"URL\",\"http://102.158.218.196:5000/api/public_alert-config?user_id=1\"");  // Set the GET URL to httpbin.org
-    sim800_wait_response();
+snprintf(command, sizeof(command),
+    "AT+HTTPPARA=\"URL\",\"http://%s:5000/api/public_alert-config?user_id=%d\"",
+    ip_address, user_id);
+
+sim800_send_command(command);
+sim800_wait_response();
 
     // Trigger the HTTP GET action
     sim800_send_command("AT+HTTPACTION=0");  // 0 indicates a GET request
