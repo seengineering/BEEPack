@@ -1,4 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+const WeatherIcons = {
+  wind: '💨',
+  humidity: '💧',
+  rain: '🌧️',
+  thermometer: '🌡️',
+  chevron: '➜'
+};
 
 const WeatherWidget = ({ lat, lon, api_key = "e21f2b6fce3340dc9ba143227252805" }) => {
   const [weather, setWeather] = useState(null);
@@ -63,78 +70,170 @@ const WeatherWidget = ({ lat, lon, api_key = "e21f2b6fce3340dc9ba143227252805" }
   if (error) return <div>Error fetching weather</div>;
   if (!weather) return <div>No weather data available</div>;
 
-  return (
+return (
     <div 
       style={{ 
-        position: 'relative',
         width: '240px',
-        height: '200px',
+        fontFamily: "'Segoe UI', Roboto, sans-serif",
+        borderRadius: '12px',
+        boxShadow: '0 3px 10px rgba(0, 0, 0, 0.15)',
         overflow: 'hidden',
-        border: '1px solid #ccc',
-        borderRadius: '8px',
-        backgroundColor: '#f9f9f9',
-        cursor: 'pointer'
-      }} 
-      ref={containerRef}
+        backgroundColor: '#f8fafc', // Slightly off-white background
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        border: '1px solid #e2e8f0' // Subtle border for contrast
+      }}
       onClick={() => setShowForecast(!showForecast)}
     >
       {/* Current Weather */}
-      <div 
-        style={{
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-          left: showForecast ? '-100%' : '0',
-          transition: 'left 0.5s ease-in-out',
-          padding: '15px',
-          boxSizing: 'border-box'
-        }}
-      >
-        <h3 style={{ marginTop: 0 }}>Current Weather in {weatherLocation || "Loading location..."}</h3>
-        <p>🌡️ Temp: {weather.temp_c}°C</p>
-        <p>🌤️ Condition: {weather.condition.text}</p>
-        <p>💧 Humidity: {weather.humidity}%</p>
-        <p>💨 Wind: {weather.wind_kph} km/h</p>
-        <p>☔ Rain: {weather.chance_of_rain}% chance</p>
-        <div style={{
-          position: 'absolute',
-          bottom: '10px',
-          right: '10px',
-          fontSize: '12px',
-          color: '#666'
-        }}>
-          Click to see tomorrow →
+      {!showForecast && (
+        <div style={{ padding: '16px', backgroundColor: '#ffffff', borderRadius: '12px 12px 0 0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ 
+              margin: 0, 
+              fontSize: '15px', 
+              fontWeight: 600,
+              color: '#1e293b', // Darker text for contrast
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: '160px'
+            }}>
+              {weatherLocation || "Fetching Location..."}
+            </h3>
+            <img 
+              src={`https:${weather.condition.icon}`} 
+              alt={weather.condition.text}
+              style={{ width: '42px', height: '42px', filter: 'drop-shadow(1px 1px 2px rgba(0,0,0,0.1))' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', margin: '12px 0' }}>
+            <span style={{ fontSize: '32px', fontWeight: 500, color: '#1e40af' }}>{weather.temp_c}°</span>
+            <div style={{ marginLeft: '12px' }}>
+              <p style={{ margin: '3px 0', fontSize: '13px', color: '#334155' }}>
+                {weather.condition.text}
+              </p>
+              <p style={{ margin: '3px 0', fontSize: '13px', color: '#64748b' }}>
+                {WeatherIcons.thermometer} H: {forecast?.day.maxtemp_c}° L: {forecast?.day.mintemp_c}°
+              </p>
+            </div>
+          </div>
+
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(3, 1fr)', 
+            gap: '10px',
+            fontSize: '12px',
+            borderTop: '1px solid #f1f5f9',
+            paddingTop: '10px'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '16px', marginBottom: '2px' }}>{WeatherIcons.wind}</div>
+              <p style={{ margin: 0, color: '#64748b' }}>Wind</p>
+              <p style={{ margin: 0, fontWeight: 500 }}>{weather.wind_kph} km/h</p>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '16px', marginBottom: '2px' }}>{WeatherIcons.humidity}</div>
+              <p style={{ margin: 0, color: '#64748b' }}>Humidity</p>
+              <p style={{ margin: 0, fontWeight: 500 }}>{weather.humidity}%</p>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '16px', marginBottom: '2px' }}>{WeatherIcons.rain}</div>
+              <p style={{ margin: 0, color: '#64748b' }}>Rain</p>
+              <p style={{ margin: 0, fontWeight: 500 }}>{weather.chance_of_rain}%</p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Tomorrow's Forecast */}
-      <div 
-        style={{
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-          left: showForecast ? '0' : '100%',
-          transition: 'left 0.5s ease-in-out',
-          padding: '15px',
-          boxSizing: 'border-box',
-          backgroundColor: '#e9f7ef'
-        }}
-      >
-        <h3 style={{ marginTop: 0 }}>Tomorrow in {weatherLocation || "Loading location..."}</h3>
-        <p>🌡️ Max: {forecast?.day.maxtemp_c}°C / Min: {forecast?.day.mintemp_c}°C</p>
-        <p>🌤️ Condition: {forecast?.day.condition.text}</p>
-        <p>💧 Humidity: {forecast?.day.avghumidity}%</p>
-        <p>💨 Wind: {forecast?.day.maxwind_kph} km/h</p>
-        <p>☔ Rain: {forecast?.day.daily_chance_of_rain}% chance</p>
-        <div style={{
-          position: 'absolute',
-          bottom: '10px',
-          left: '10px',
-          fontSize: '12px',
-          color: '#666'
+      {showForecast && (
+        <div style={{ 
+          padding: '16px', 
+          backgroundColor: '#ffffff',
+          borderRadius: '12px 12px 0 0',
+          height: '100%'
         }}>
-          ← Click to go back
+          <h3 style={{ 
+            margin: '0 0 12px 0', 
+            fontSize: '15px', 
+            fontWeight: 600,
+            color: '#1e293b',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}>
+            Tomorrow in {weatherLocation}
+          </h3>
+          
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+            <img 
+              src={`https:${forecast?.day.condition.icon}`} 
+              alt={forecast?.day.condition.text}
+              style={{ width: '42px', height: '42px', filter: 'drop-shadow(1px 1px 2px rgba(0,0,0,0.1))' }}
+            />
+            <div style={{ marginLeft: '12px' }}>
+              <p style={{ margin: '3px 0', fontSize: '13px', color: '#334155' }}>
+                {forecast?.day.condition.text}
+              </p>
+              <p style={{ margin: '3px 0', fontSize: '28px', fontWeight: 500, color: '#1e40af' }}>
+                {forecast?.day.avgtemp_c}°
+              </p>
+            </div>
+          </div>
+
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(3, 1fr)', 
+            gap: '10px',
+            fontSize: '12px',
+            borderTop: '1px solid #f1f5f9',
+            paddingTop: '10px'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '16px', marginBottom: '2px' }}>↑</div>
+              <p style={{ margin: 0, color: '#64748b' }}>High</p>
+              <p style={{ margin: 0, fontWeight: 500 }}>{forecast?.day.maxtemp_c}°</p>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '16px', marginBottom: '2px' }}>↓</div>
+              <p style={{ margin: 0, color: '#64748b' }}>Low</p>
+              <p style={{ margin: 0, fontWeight: 500 }}>{forecast?.day.mintemp_c}°</p>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '16px', marginBottom: '2px' }}>{WeatherIcons.rain}</div>
+              <p style={{ margin: 0, color: '#64748b' }}>Rain</p>
+              <p style={{ margin: 0, fontWeight: 500 }}>{forecast?.day.daily_chance_of_rain}%</p>
+            </div>
+          </div>
         </div>
+      )}
+
+      {/* Toggle Footer */}
+      <div style={{
+        padding: '10px 16px',
+        backgroundColor: showForecast ? '#e0f2fe' : '#f0fdf4',
+        textAlign: 'center',
+        fontSize: '12px',
+        color: '#334155',
+        borderTop: '1px solid #e2e8f0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '6px'
+      }}>
+        {showForecast ? (
+          <>
+            <span style={{ fontSize: '14px' }}>←</span>
+            <span>Current Weather</span>
+          </>
+        ) : (
+          <>
+            <span>Tomorrow's Forecast</span>
+            <span style={{ fontSize: '14px' }}>→</span>
+          </>
+        )}
       </div>
     </div>
   );

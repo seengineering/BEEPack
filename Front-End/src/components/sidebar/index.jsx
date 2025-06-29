@@ -52,7 +52,7 @@ const Sidebar = ({ open, onClose }) => {
         <Links routes={routes} />
         {/* Weather Widget */}
         {lon !== "0" && lat !== "0" && (
-          <div className="mt-5 p-4">
+          <div className="mt-3 p-4">
             <WeatherWidget lon={lon} lat={lat} />
           </div>
         )}

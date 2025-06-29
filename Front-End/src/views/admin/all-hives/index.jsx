@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import HiveCard from "./components/HiveCard.jsx";
 import AddHiveArea from "./components/AddHiveArea.jsx";
 import BEE1 from "assets/img/beehive/bee5.jpg";
+import Ebee from "assets/img/beehive/emptybee.png";
 import AddHiveButton from "./components/AddHiveButton.jsx";
 import Alert from "@mui/material/Alert";
 import HivesSummary from "./components/HivesSummary.jsx";
@@ -303,7 +304,7 @@ const AllHives = () => {
           Hive Modified Succesfuly.
         </Alert>
       ) : null}
-      <div className="z-20 grid grid-cols-1 gap-5 md:grid-cols-4">
+      {listOfHives.length >0 ? <div className="z-20 grid grid-cols-1 gap-5 md:grid-cols-4">
         {listOfHives.map((hive, index) => (
           <HiveCard
             key={index}
@@ -327,7 +328,28 @@ const AllHives = () => {
             link="detailed-dashboard"
           />
         ))}
-      </div>
+      </div>: (
+  <div className="flex flex-col items-center justify-center py-12 text-center">
+    {/* Ebee image with subtle hover effect */}
+    <img 
+      src={Ebee}  // Update with your actual image path
+      alt="Empty hive illustration"
+      className="w-40 h-40 mb-4 object-contain hover:scale-105 transition-transform"
+    />
+      <path 
+        strokeLinecap="round" 
+        strokeLinejoin="round" 
+        strokeWidth="1.5" 
+        d="M12 4v16m8-8H4m13-5l-5 5m5 5l-5-5m-5-5l5 5m-5 5l5-5"
+      />
+    <h3 className="text-xl font-medium text-gray-700 mb-2">
+      Please Insert Your First Hive
+    </h3>
+    <p className="text-gray-500 max-w-md px-4">
+      No hives are currently registered. When you add your first hive, you'll see its health metrics, location data, and monitoring information displayed here.
+    </p>
+  </div>
+)}
     </div>
   );
 };
